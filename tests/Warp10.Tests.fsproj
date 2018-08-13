@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../src/Warp10/Warp10.fsproj" />
+    <ProjectReference Include="../src/Warp10.Net/Warp10.Net.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Util.fs" />
+    <Compile Include="Tests.Warp10.fs" />
+    <Compile Include="Main.fs" />
+  </ItemGroup>
+  <Import Project="..\.paket\Paket.Restore.targets" />
+</Project>
