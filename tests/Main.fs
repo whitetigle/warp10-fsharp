@@ -63,7 +63,7 @@ describe "Warp10" <| fun _ ->
                 equal expected result
             )
 
-        it "should update" <| fun _ ->
+        it "should update from string list" <| fun _ ->
             let expected = 200
 
             let testUpdate request =
@@ -77,6 +77,36 @@ describe "Warp10" <| fun _ ->
                 )
 
             [
+                "1440000000000000// toto{a=42,b=42} 42"
+                "1440000000000000// titi{a=42,b=42} 42"
+                "1441000000000000// toto{a=4,b=4} 4"
+                "1441000000000000// titi{a=4,b=4} 4"
+                "1442000000000000// toto{a=42,b=42} 42"
+                "1442000000000000// titi{a=42,b=42} 42"
+                "1443000000000000// toto{a=4,b=4} 4"
+                "1443000000000000// titi{a=4,b=4} 4"
+                "1444000000000000// toto{a=42,b=42} 42"
+                "1444000000000000// titi{a=42,b=42} 42"
+            ]
+            |> List.map UpdateRequest.fromString
+            |> List.map testUpdate
+            |> Promise.Parallel
+
+        it "should update" <| fun _ ->
+            let expected = 200
+
+            let testUpdate request =
+                Warp10.Client.update (endpoint, writeToken, request )
+                |> Promise.map ( fun res ->
+                    let result =
+                        match res with
+                        | Ok code -> code
+                        | Error code -> code
+                    equal expected result
+                )
+
+            let now = (double (DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()))
+            [
                 {
                     TimeStamp=None
                     Latitude=None
@@ -86,7 +116,7 @@ describe "Warp10" <| fun _ ->
                     Value=LONG 123
                 }
                 {
-                    TimeStamp=Some (DateTimeOffset(DateTime.Now).ToUnixTimeSeconds())
+                    TimeStamp=Some now
                     Latitude=None
                     Longitude=None
                     ClassName="foo"
@@ -102,7 +132,7 @@ describe "Warp10" <| fun _ ->
                     Value=LONG 129
                 }
                 {
-                    TimeStamp=Some (DateTimeOffset(DateTime.Now).ToUnixTimeSeconds())
+                    TimeStamp=Some now
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
                     ClassName="foo"
@@ -110,7 +140,7 @@ describe "Warp10" <| fun _ ->
                     Value=LONG 129
                 }
                 {
-                    TimeStamp=Some (DateTimeOffset(DateTime.Now).ToUnixTimeSeconds())
+                    TimeStamp=Some now
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
                     ClassName="foo"
@@ -118,7 +148,7 @@ describe "Warp10" <| fun _ ->
                     Value=BOOL true
                 }
                 {
-                    TimeStamp=Some (DateTimeOffset(DateTime.Now).ToUnixTimeSeconds())
+                    TimeStamp=Some now
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
                     ClassName="foo"
@@ -126,7 +156,7 @@ describe "Warp10" <| fun _ ->
                     Value=STRING "toto"
                 }
                 {
-                    TimeStamp=Some (DateTimeOffset(DateTime.Now).ToUnixTimeSeconds())
+                    TimeStamp=Some now
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
                     ClassName="foo"

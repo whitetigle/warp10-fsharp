@@ -21,7 +21,7 @@ module Client =
                     ContentType "text/plain"
                     HttpRequestHeaders.Custom ("X-Warp10-Token", token)
                 ]
-                RequestProperties.Body <| unbox (UpdateRequest.prepare value)
+                RequestProperties.Body <| unbox (UpdateRequest.toString value)
             ]
 
         promise {
@@ -61,3 +61,4 @@ module Client =
                 return Error res.Status
             }
 
+    let exec = fetch
