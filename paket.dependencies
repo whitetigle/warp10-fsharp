@@ -12,6 +12,7 @@ nuget Fable.Elmish
 nuget Fable.PowerPack
 nuget Fable.React
 nuget Fable.Import.HMR
+nuget Fable.PowerPack
 
 group netcorebuild
     source https://www.nuget.org/api/v2

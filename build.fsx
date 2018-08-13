@@ -92,11 +92,11 @@ Target.create "Clean" (fun _ ->
     ++ "src/**/obj"
     ++ "tests/**/bin"
     ++ "tests/**/obj"
-//    ++ "docs/**/bin"
-//    ++ "docs/**/obj"
-//    ++ "docs/**/build"
-//    ++ "docs/scss/extra"
-//    ++ "docs/public"
+    ++ "docs/**/bin"
+    ++ "docs/**/obj"
+    ++ "docs/**/build"
+    ++ "docs/scss/extra"
+    ++ "docs/public"
     |> Shell.cleanDirs
 )
 
@@ -144,6 +144,7 @@ Target.create "MochaTest" (fun _ ->
 let testNetFrameworkDir = "tests" </> "bin" </> "Release" </> "net461"
 let testNetCoreDir = "tests" </> "bin" </> "Release" </> "netcoreapp2.0"
 
+(*
 Target.create "ExpectoTest" (fun _ ->
     build "tests/Warp10.Tests.fsproj" "netcoreapp2.0"
     build "tests/Warp10.Tests.fsproj" "net461"
@@ -155,6 +156,7 @@ Target.create "ExpectoTest" (fun _ ->
 
     dotnet testNetCoreDir "" "Warp10.Tests.dll"
 )
+*)
 
 let root = __SOURCE_DIRECTORY__
 let docs = root </> "docs"
@@ -323,8 +325,8 @@ Target.create "Docs.Publish" (fun _ ->
     ==> "YarnInstall"
     ==> "DotnetRestore"
     ==> "MochaTest"
-    ==> "ExpectoTest"
-    ==> "Publish"
+//    ==> "ExpectoTest"
+//    ==> "Publish"
 
 "DotnetRestore"
     ==> "Watch"
@@ -343,4 +345,5 @@ Target.create "Docs.Publish" (fun _ ->
     ==> "Docs.Publish"
 *)
 
-Target.runOrDefault "ExpectoTest"
+//Target.runOrDefault "ExpectoTest"
+Target.runOrDefault "MochaTest"

@@ -8,8 +8,8 @@
     <ProjectReference Include="../src/Warp10.Net/Warp10.Net.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Util.fs" />
-    <Compile Include="Tests.Warp10.fs" />
+<!--    <Compile Include="Util.fs" />-->
+<!-->    <Compile Include="Tests.Warp10.fs" />-->
     <Compile Include="Main.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
