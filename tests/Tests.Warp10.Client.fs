@@ -206,11 +206,7 @@ describe "Warp10.Client" <| fun _ ->
 
             prepareData()
             |> Promise.map( fun _ ->
-                let request =
-                    {
-                        Selector=FullRange "toto{a=42,b=42}"
-                        Interval=None
-                    }
+                let request = FullRange "toto{a=42,b=42}"
                 checkDelete request
                 )
 
@@ -218,11 +214,7 @@ describe "Warp10.Client" <| fun _ ->
 
             prepareData()
             |> Promise.map( fun _ ->
-                let request =
-                    {
-                        Selector=FullRange "toto{a=42,b=42}"
-                        Interval=None
-                    }
+                let request = FullRange "~t.t.{b=4}"
                 checkDelete request
                 )
 
@@ -230,11 +222,7 @@ describe "Warp10.Client" <| fun _ ->
 
             prepareData()
             |> Promise.map( fun _ ->
-                let request =
-                    {
-                        Selector=FullRange "~.*{a=42}"
-                        Interval=None
-                    }
+                let request = Partial("~t.t.{b=4}", (Timestamp (1440000000000000.,1444000000000000. )))
                 checkDelete request
                 )
 
@@ -242,11 +230,34 @@ describe "Warp10.Client" <| fun _ ->
 
             prepareData()
             |> Promise.map( fun _ ->
-                let request =
-                    {
-                        Selector=FullRange "toto{}"
-                        Interval=Some (Timestamp (1440000000000000.,1444000000000000. ))
-                    }
+                let request = FullRange "~.*{a=42}"
+                checkDelete request
+                )
+
+        it "should delete" <| fun _ ->
+
+            prepareData()
+            |> Promise.map( fun _ ->
+                let request = Partial("~.*{a=42}", (Timestamp (1440000000000000.,1444000000000000. )))
+                checkDelete request
+                )
+
+        it "should delete" <| fun _ ->
+
+            prepareData()
+            |> Promise.map( fun _ ->
+                let request = Partial("toto{}", (Timestamp (1440000000000000.,1444000000000000. )))
+                checkDelete request
+                )
+
+        it "should delete" <| fun _ ->
+
+            let start = DateTime(2015,8,19,16,0,0,0)
+            let stop= DateTime(2015,10,04,23,6,40,0)
+
+            prepareData()
+            |> Promise.map( fun _ ->
+                let request = Partial("toto{}", (ISO8601 (start,stop)))
                 checkDelete request
                 )
 
@@ -315,8 +326,8 @@ describe "Warp10.Client" <| fun _ ->
 
             prepareData()
             |> Promise.map( fun _ ->
-                let start = DateTime(2015,8,19,16,0,0) //1440000000000000
-                let stop = DateTime(2015,10,04,23,6,40) //1444000000000000
+                let start = DateTime(2015,8,19,16,0,0,0) //1440000000000000
+                let stop = DateTime(2015,10,04,23,6,40,0) //1444000000000000
                 let request =
                     {
                         Selector="toto{a=42,b=42}"

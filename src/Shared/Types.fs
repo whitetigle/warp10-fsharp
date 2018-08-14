@@ -4,6 +4,11 @@ open System
 open Fable.Core
 open Fable.Core.JsInterop
 
+module WebUtils =
+
+    [<Emit("encodeURI($0)")>]
+    let urlEncode v : string = jsNative
+
 type TimeStamp = float
 
 module DateUtils =
@@ -197,7 +202,7 @@ module Types =
                     TimeStamp=ts
                     Latitude=lat
                     Longitude=long
-                    ClassName = className
+                    ClassName = className |> WebUtils.urlEncode
                     Labels = labels
                     Value = value
                 }
@@ -247,36 +252,29 @@ module Types =
         | Timestamp of TimeStamp * TimeStamp
         | ISO8601 of DateTime * DateTime
 
-    // this is just here to help you remember what you're doing
-    // no test is done on the actual selector query
-    type Selector =
-        | FullRange of string
-        | Partial of string
-
     type DeleteRequest =
-        {
-            Selector:Selector
-            Interval:DateFormat option
-        }
-        static member toString (request:DeleteRequest) =
-            let requestParams,deleteAll =
-                match request.Selector with
-                | FullRange s -> ["selector",s], true
-                | Partial s -> ["selector",s], false
+        | FullRange of string
+        | Partial of string * DateFormat
 
-            let requestParams =
-                match request.Interval with
-                | Some kind ->
-                    match kind with
-                    | Timestamp (start,stop) ->
-                        requestParams
-                            @ ["start",start |> DateUtils.timestampToMicroSeconds]
-                            @ ["end",stop |> DateUtils.timestampToMicroSeconds]
-                    | ISO8601 (start,stop) ->
-                        requestParams
-                            @ ["start",start |> DateUtils.toISO8601]
-                            @ ["end",stop |> DateUtils.toISO8601]
-                | None -> requestParams
+    module DeleteRequest =
+        let toString (request:DeleteRequest) =
+            let requestParams,deleteAll =
+                match request with
+                | FullRange s ->
+                    ["selector",s], true
+
+                | Partial (s, kind) ->
+                    let parms =
+                        match kind with
+                        | Timestamp (start,stop) ->
+                            ["selector",s]
+                                @ ["start",start |> DateUtils.timestampToMicroSeconds]
+                                @ ["end",stop |> DateUtils.timestampToMicroSeconds]
+                        | ISO8601 (start,stop) ->
+                            ["selector",s]
+                                @ ["start",start |> DateUtils.toISO8601]
+                                @ ["end",stop |> DateUtils.toISO8601]
+                    parms, false
 
             let requestString =
                 requestParams

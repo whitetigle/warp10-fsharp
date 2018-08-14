@@ -28,7 +28,6 @@ let srcFiles =
     ++ "./src/Warp10.Net/Warp10.Net.fsproj"
 
 let testsGlob = "tests/**/*.fsproj"
-let docFile = "./docs/Docs.fsproj"
 
 module Util =
 
@@ -92,23 +91,16 @@ Target.create "Clean" (fun _ ->
     ++ "src/**/obj"
     ++ "tests/**/bin"
     ++ "tests/**/obj"
-    ++ "docs/**/bin"
-    ++ "docs/**/obj"
-    ++ "docs/**/build"
-    ++ "docs/scss/extra"
-    ++ "docs/public"
     |> Shell.cleanDirs
 )
 
 Target.create "YarnInstall"(fun _ ->
     Yarn.install id
-    Yarn.install (fun o -> { o with WorkingDirectory = "./docs/" })
 )
 
 Target.create "DotnetRestore" (fun _ ->
     srcFiles
     ++ testsGlob
-    ++ docFile
     |> Seq.iter (fun proj ->
         DotNet.restore id proj
 ))
@@ -158,80 +150,6 @@ Target.create "ExpectoTest" (fun _ ->
 )
 *)
 
-let root = __SOURCE_DIRECTORY__
-let docs = root </> "docs"
-let docsContent = docs </> "src" </> "Content"
-let buildMain = docs </> "build" </> "src" </> "Main.js"
-
-let buildSass _ =
-    Yarn.exec "run node-sass --output-style compressed --output docs/public/ docs/scss/main.scss" id
-
-let applyAutoPrefixer _ =
-    Yarn.exec "run postcss docs/public/main.css --use autoprefixer -o docs/public/main.css" id
-
-Target.create "Docs.Watch" (fun _ ->
-    use watcher = new FileSystemWatcher(docsContent, "*.md")
-    watcher.IncludeSubdirectories <- true
-    watcher.EnableRaisingEvents <- true
-
-    watcher.Changed.Add(fun _ ->
-        Process.execSimple
-            (fun info ->
-                { info with
-                    FileName = "node"
-                    Arguments = buildMain }
-            )
-            (TimeSpan.FromSeconds 30.) |> ignore
-    )
-
-    // Make sure the style is generated
-    // Watch mode of node-sass don't trigger a first build
-    buildSass ()
-
-    !! docFile
-    |> Seq.iter (fun proj ->
-        let projDir = proj |> Path.getDirectory
-
-        [ async {
-            dotnet projDir "fable" "yarn-run fable-splitter --port free -- -c docs/splitter.config.js -w"
-          }
-          async {
-            Yarn.exec "run node-sass --output-style compressed --watch --output docs/public/ docs/scss/main.scss" id
-          }
-          async {
-            Yarn.exec "run http-server -c-1 docs/public" id
-          }
-        ]
-        |> Async.Parallel
-        |> Async.RunSynchronously
-        |> ignore
-    )
-)
-
-Target.create "Docs.Setup" (fun _ ->
-    // Make sure directories exist
-    Directory.ensure "./docs/scss/extra/highlight.js/"
-    Directory.ensure "./docs/public/demos/"
-
-    // Copy files from node_modules allow us to manage them via yarn
-    Shell.copyDir "./docs/public/fonts" "./node_modules/font-awesome/fonts" (fun _ -> true)
-    Shell.copyFile "./docs/scss/extra/highlight.js/atom-one-light.css" "./node_modules/highlight.js/styles/atom-one-light.css"
-    // Copy demos file
-    Shell.copyDir "./docs/public/demos" "./demos/Warp10.Elmish.Demo/output/" (fun _ -> true)
-
-    DotNet.restore id docFile
-)
-
-Target.create "Docs.Build" (fun _ ->
-    !! docFile
-    |> Seq.iter (fun proj ->
-        let projDir = proj |> Path.getDirectory
-
-        dotnet projDir "fable" "yarn-run fable-splitter --port free -- -c docs/splitter.config.js -p"
-        buildSass ()
-        applyAutoPrefixer ()
-    )
-)
 
 Target.create "Watch" (fun _ ->
     !! testsGlob
@@ -301,25 +219,6 @@ Target.create "Publish" (fun _ ->
     )
 )
 
-// Where to push generated documentation
-let githubLink = "git@github.com:whitetigle/warp10-fsharp.git"
-let publishBranch = "gh-pages"
-let repoRoot = __SOURCE_DIRECTORY__
-let temp = repoRoot </> "temp"
-
-Target.create "Docs.Publish" (fun _ ->
-    // Clean the repo before cloning this avoid potential conflicts
-    Shell.cleanDir temp
-    Repository.cloneSingleBranch "" githubLink publishBranch temp
-
-    // Copy new files
-    Shell.copyRecursive "docs/public" temp true |> printfn "%A"
-
-    // Deploy the new site
-    Staging.stageAll temp
-    Commit.exec temp (sprintf "Update site (%s)" (DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")))
-    Branches.push temp
-)
 
 "Clean"
     ==> "YarnInstall"
@@ -330,20 +229,6 @@ Target.create "Docs.Publish" (fun _ ->
 
 "DotnetRestore"
     ==> "Watch"
-(*
-
-"Docs.Setup"
-    <== [ "DotnetRestore" ]
-
-"Docs.Build"
-    <== [ "Docs.Setup" ]
-
-"Docs.Watch"
-    <== [ "Docs.Setup" ]
-
-"Docs.Build"
-    ==> "Docs.Publish"
-*)
 
 //Target.runOrDefault "ExpectoTest"
 Target.runOrDefault "MochaTest"
