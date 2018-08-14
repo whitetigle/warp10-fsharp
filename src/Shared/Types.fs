@@ -4,13 +4,30 @@ open System
 open Fable.Core
 open Fable.Core.JsInterop
 
+type TimeStamp = float
+
+module DateUtils =
+
+    let [<Literal>] microSecondsLength = 16
+
+    let timestampToMicroSeconds ts =
+        let ts = sprintf "%f" ts
+        let ts = (ts.Split '.') |> String.concat ""
+        let ts = ts.Substring(0, microSecondsLength-1)
+        let missing = microSecondsLength - 1 - ts.Length
+        let trailingZeros = [0..missing] |> List.map ( fun v -> "0") |>  List.toSeq |> String.concat ""
+        sprintf "%s%s" ts trailingZeros
+
+    let toISO8601 (dt:DateTime) =
+        sprintf "%i-%02d-%02dT%02d:%02d:%02d.%02d0000Z" dt.Year dt.Month dt.Day dt.Hour dt.Minute dt.Second dt.Millisecond
+
 module Types =
 
-    [<Emit("typeof($0) === \"boolean\"")>]
-    let isBool v : bool = jsNative
+    let isBool (v:string) =
+        if v.Contains "true" then Some true
+        elif v.Contains "false" then Some false
+        else None
 
-    [<Emit("Boolean($0)")>]
-    let toBoolean v : bool = jsNative
 
     type Token =
         | Write of string
@@ -27,14 +44,55 @@ module Types =
             Protocol:Protocol
         }
 
+    [<StringEnum>]
+    type FetchFormat =
+        | [<CompiledName("text")>] Text
+        | [<CompiledName("fulltext")>] FullText
+
+    type Interval =
+        | StartAndStop of DateTime * DateTime
+        | LastReadings of TimeStamp * int
+        | Timespan of TimeStamp * TimeStamp
+
     type FetchRequest =
         {
-            Token:string
-            ClassnameSelector:string
-            LabelsSelector:string
-            StartTimeStamp:string
-            EndTimeStamp:string
+            Selector:string
+            Format:FetchFormat
+            Dedup:bool
+            Interval:Interval
         }
+        static member toString (request:FetchRequest) =
+            let requestParams = ["selector",request.Selector]
+            let requestParams = requestParams @ ["dedup",sprintf "%b" request.Dedup]
+            let requestParams = requestParams @ ["format",sprintf "%s" (string request.Format)]
+
+            let requestParams =
+                match request.Interval with
+                | StartAndStop (start,stop) ->
+                    requestParams
+                        @ ["start",start |> DateUtils.toISO8601]
+                        @ ["stop",stop |> DateUtils.toISO8601]
+
+                | LastReadings (start,count) ->
+                    let count =
+                        if count < 0 then sprintf "%i" count else sprintf "-%i" count
+
+                    requestParams
+                        @ ["now",start |> DateUtils.timestampToMicroSeconds]
+                        @ ["timespan", count]
+
+                | Timespan (start,ts) ->
+                    requestParams
+                        @ ["now",start |> DateUtils.timestampToMicroSeconds]
+                        @ ["timespan",ts |> DateUtils.timestampToMicroSeconds]
+
+            requestParams
+                |> List.map( fun kv ->
+                    let key,value=kv
+                    sprintf "%s=%s" key value
+                )
+                |> String.concat "&"
+
 
     type WGS84 = int * int
     type LabelKeyValue = string * string
@@ -44,8 +102,6 @@ module Types =
         | DOUBLE of double
         | BOOL of bool
         | STRING of string
-
-    let [<Literal>] microSecondsLength = 16
 
     type UpdateRequest =
         {
@@ -58,7 +114,7 @@ module Types =
         }
         static member fromString (input:string) =
             //1440000000000000// toto{a=42,b=42} 42
-            printfn "input=%s" input
+//            printfn "input=%s" input
 
             let parts = input.Split '/'
             match parts.Length with
@@ -118,15 +174,17 @@ module Types =
                                         |> Seq.toList
                                 let value =
                                     let v = remaining.[1]
-                                    match Int32.TryParse(v) with
-                                    | true, v -> LONG v
+                                    match isBool(v) with
+                                    | Some b -> BOOL b
                                     | _ ->
-                                        match isBool(v) with
-                                        | true -> BOOL (toBoolean v)
+                                        match Int32.TryParse(v) with
+                                        | true, v -> LONG v
                                         | _ ->
                                             match Double.TryParse(v) with
                                             | true, v -> DOUBLE v
-                                            | _ -> STRING v
+                                            | _ ->
+                                                let output = v.Replace("'", "")
+                                                STRING (output.Trim())
 
                                 labels, value
                             | _ -> failwith "invalid format for labels and value"
@@ -150,11 +208,7 @@ module Types =
             let ts =
                 match request.TimeStamp with
                 | Some ts ->
-                    let ts = sprintf "%f" ts
-                    let ts = (ts.Split '.') |> String.Concat
-                    let missing = microSecondsLength - ts.Length
-                    let trailing = [0..missing] |> List.map ( fun v -> "0") |>  List.toSeq |> String.concat ""
-                    sprintf "%s%s" ts trailing
+                    DateUtils.timestampToMicroSeconds ts
                 | None -> ""
 
             let latlong =
@@ -179,7 +233,7 @@ module Types =
             let value =
                 match request.Value with
                 | LONG v -> sprintf "%i" v
-                | DOUBLE v -> sprintf "%f" v
+                | DOUBLE v -> double(v).ToString() // remove trailing zeros
                 | BOOL v -> sprintf "%b" v
                 | STRING v -> sprintf "'%s'" v
 
@@ -188,3 +242,52 @@ module Types =
 //            printfn "%s" request
             request
 
+
+    type DateFormat =
+        | Timestamp of TimeStamp * TimeStamp
+        | ISO8601 of DateTime * DateTime
+
+    // this is just here to help you remember what you're doing
+    // no test is done on the actual selector query
+    type Selector =
+        | FullRange of string
+        | Partial of string
+
+    type DeleteRequest =
+        {
+            Selector:Selector
+            Interval:DateFormat option
+        }
+        static member toString (request:DeleteRequest) =
+            let requestParams,deleteAll =
+                match request.Selector with
+                | FullRange s -> ["selector",s], true
+                | Partial s -> ["selector",s], false
+
+            let requestParams =
+                match request.Interval with
+                | Some kind ->
+                    match kind with
+                    | Timestamp (start,stop) ->
+                        requestParams
+                            @ ["start",start |> DateUtils.timestampToMicroSeconds]
+                            @ ["end",stop |> DateUtils.timestampToMicroSeconds]
+                    | ISO8601 (start,stop) ->
+                        requestParams
+                            @ ["start",start |> DateUtils.toISO8601]
+                            @ ["end",stop |> DateUtils.toISO8601]
+                | None -> requestParams
+
+            let requestString =
+                requestParams
+                    |> List.map( fun kv ->
+                        let key,value=kv
+                        sprintf "%s=%s" key value
+                    )
+                    |> String.concat "&"
+
+            match deleteAll with
+            | true ->
+                sprintf "deleteall&%s" requestString
+            | false ->
+                sprintf "%s" requestString
