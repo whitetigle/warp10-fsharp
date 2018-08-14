@@ -9,6 +9,13 @@ module WebUtils =
     [<Emit("encodeURI($0)")>]
     let urlEncode v : string = jsNative
 
+    let warpEncode (str:string) =
+        str
+            .Replace("{","%7B")
+            .Replace(",","%2C")
+            .Replace("}","%7D")
+            .Replace("=","%3D")
+
 type TimeStamp = float
 
 module DateUtils =
@@ -33,6 +40,12 @@ module Types =
         elif v.Contains "false" then Some false
         else None
 
+    [<StringEnum>]
+    type Operation =
+        | [<CompiledName("fetch")>] Fetch
+        | [<CompiledName("update")>] Update
+        | [<CompiledName("exec")>] Exec
+        | [<CompiledName("delete")>] Delete
 
     type Token =
         | Write of string
@@ -43,10 +56,16 @@ module Types =
         | [<CompiledName("http")>] HTTP
         | [<CompiledName("https")>] HTTPS
 
+    [<StringEnum>]
+    type WarpApiVersion =
+        | [<CompiledName("0")>] V0
+
     type EndPoint =
         {
-            Url:string
+            Host:string
+            Port:int option
             Protocol:Protocol
+            ApiVersion:WarpApiVersion
         }
 
     [<StringEnum>]
@@ -113,6 +132,7 @@ module Types =
             TimeStamp:float option
             Latitude: WGS84 option
             Longitude: WGS84 option
+            Elevation: int option
             ClassName:string
             Labels:LabelKeyValue list
             Value:ValueType
@@ -121,6 +141,11 @@ module Types =
             //1440000000000000// toto{a=42,b=42} 42
 //            printfn "input=%s" input
 
+            (*
+                /!\ WARNING: this is an over simplified parser which does not take special characters into account
+                like {,=}
+                TODO: rework parser.
+            *)
             let parts = input.Split '/'
             match parts.Length with
             | x when x = 3 ->
@@ -158,10 +183,20 @@ module Types =
 
 
                 let data = parts.[2].Trim().Split '{'
-                let className, labels, value =
+                let className, labels, value, elev =
                     match data.Length with
                     | x when x = 2 ->
-                        let className = data.[0]
+                        let className, elev =
+                            let tokens = data.[0].Split ' '
+                            if tokens.Length > 1 then
+                                let cls = tokens.[1]
+                                let elev =
+                                    match Int32.TryParse(tokens.[0]) with
+                                    | true, v -> Some  (int v)
+                                    | false, _ -> None
+                                cls, elev
+                            else
+                                data.[0], None
                         let remaining = data.[1].Split '}'
                         let labels, value =
                             match remaining.Length with
@@ -195,14 +230,15 @@ module Types =
                             | _ -> failwith "invalid format for labels and value"
 
 
-                        className, labels, value
+                        className, labels, value, elev
                     | _ -> failwith "invalid format"
 
                 {
                     TimeStamp=ts
                     Latitude=lat
                     Longitude=long
-                    ClassName = className |> WebUtils.urlEncode
+                    Elevation = elev
+                    ClassName = className
                     Labels = labels
                     Value = value
                 }
@@ -226,12 +262,17 @@ module Types =
                 | None, Some long -> failwith "Missing latitude"
                 | _ -> ""
 
-            let cls = request.ClassName
+            let cls = request.ClassName |> WebUtils.urlEncode |> WebUtils.warpEncode
+            let elev =
+                match request.Elevation with
+                | Some elev -> sprintf "%i" elev
+                | None -> ""
+
             let labels =
                 request.Labels
                 |> Seq.map( fun lkv ->
                     let key,value = lkv
-                    sprintf "%s=%s" key value
+                    sprintf "%s=%s" (key|> WebUtils.urlEncode |> WebUtils.warpEncode) (value|> WebUtils.urlEncode |> WebUtils.warpEncode)
                 )
                 |> String.concat ","
 
@@ -243,7 +284,7 @@ module Types =
                 | STRING v -> sprintf "'%s'" v
 
 
-            let request = sprintf "%s/%s/ %s{%s} %s" ts latlong cls labels value
+            let request = sprintf "%s/%s/%s %s{%s} %s" ts latlong elev cls labels value
 //            printfn "%s" request
             request
 
@@ -255,6 +296,7 @@ module Types =
     type DeleteRequest =
         | FullRange of string
         | Partial of string * DateFormat
+        | From of string * DateTime
 
     module DeleteRequest =
         let toString (request:DeleteRequest) =
@@ -274,6 +316,12 @@ module Types =
                             ["selector",s]
                                 @ ["start",start |> DateUtils.toISO8601]
                                 @ ["end",stop |> DateUtils.toISO8601]
+                    parms, false
+
+                | From (s, start) ->
+                    let parms =
+                        ["selector",s]
+                            @ ["start",start |> DateUtils.toISO8601]
                     parms, false
 
             let requestString =

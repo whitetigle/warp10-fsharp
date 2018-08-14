@@ -8,6 +8,17 @@ open Shared.Types
 [<RequireQualifiedAccess>]
 module Client =
 
+    let prepareUrl endpoint operation=
+        match endpoint.Port with
+        | Some p -> sprintf "%s://%s:%i/api/v%s/%s" (string endpoint.Protocol) endpoint.Host p (string endpoint.ApiVersion) (string operation)
+        | None -> sprintf "%s://%s/api/v%s/%s" (string endpoint.Protocol) endpoint.Host (string endpoint.ApiVersion) (string operation)
+
+    let prepareHeaders token =
+        requestHeaders [
+            ContentType "text/plain"
+            HttpRequestHeaders.Custom ("X-Warp10-Token", token)
+        ]
+
     let update (endpoint:EndPoint, token:Token, value:UpdateRequest) =
         let token =
             match token with
@@ -17,15 +28,12 @@ module Client =
         let defaultProps =
             [
                 RequestProperties.Method HttpMethod.POST
-                requestHeaders [
-                    ContentType "text/plain"
-                    HttpRequestHeaders.Custom ("X-Warp10-Token", token)
-                ]
+                prepareHeaders token
                 RequestProperties.Body <| unbox (UpdateRequest.toString value)
             ]
 
         promise {
-            let url = sprintf "%s://%s/api/v0/update" (string endpoint.Protocol) endpoint.Url
+            let url =  prepareUrl endpoint Operation.Update
             let! res = fetch url defaultProps
             let status =
                 match res.Status with
@@ -43,14 +51,12 @@ module Client =
         let defaultProps =
             [
                 RequestProperties.Method HttpMethod.GET
-                requestHeaders [
-                    ContentType "text/plain"
-                    HttpRequestHeaders.Custom ("X-Warp10-Token", token)
-                ]
+                prepareHeaders token
             ]
 
         promise {
-            let url = sprintf "%s://%s/api/v0/delete?%s" (string endpoint.Protocol) endpoint.Url (DeleteRequest.toString value)
+            let url =  prepareUrl endpoint Operation.Delete
+            let url = sprintf "%s?%s" url (DeleteRequest.toString value)
             let! res = fetch url defaultProps
             let status =
                 match res.Status with
@@ -68,15 +74,12 @@ module Client =
         let defaultProps =
             [
                 RequestProperties.Method HttpMethod.POST
-                requestHeaders [
-                    ContentType "text/plain"
-                    HttpRequestHeaders.Custom ("X-Warp10-Token", token)
-                ]
+                prepareHeaders token
                 RequestProperties.Body <| unbox script
             ]
 
         promise {
-            let url = sprintf "%s://%s/api/v0/exec" (string endpoint.Protocol) endpoint.Url
+            let url =  prepareUrl endpoint Operation.Exec
             let! res = fetch url defaultProps
             match res.Ok with
             | true ->
@@ -95,14 +98,12 @@ module Client =
         let defaultProps =
             [
                 RequestProperties.Method HttpMethod.GET
-                requestHeaders [
-                    ContentType "text/plain"
-                    HttpRequestHeaders.Custom ("X-Warp10-Token", token)
-                ]
+                prepareHeaders token
             ]
 
         promise {
-            let url = sprintf "%s://%s/api/v0/fetch?%s" (string endpoint.Protocol) endpoint.Url (FetchRequest.toString value)
+            let url =  prepareUrl endpoint Operation.Fetch
+            let url = sprintf "%s?%s" url (FetchRequest.toString value)
             let! res = fetch url defaultProps
             let! text = res.text()
             let status =

@@ -27,7 +27,7 @@ let readToken : Token = Read "4l_tJMgbsVp8Tydi5Msxb3GqEAudZTyDHXTCYZADwZ_RzPVhHB
 let writeToken : Token = Write "UCuQmMpw7qZOsmzVX3jmboLOtcE20DFoCFR2ty88c9ulPtes3o4giPUsHZuLerFdHWsxOeRyHW6XhiEe1jUxzokuFg28fXyQzdLJzTAmAvc"
 
 // change this host and port to yours
-let endpoint = { Url="192.168.99.100:8080"; Protocol=HTTP}
+let endpoint = { Host="192.168.99.100"; Port=Some 8080; ApiVersion=V0; Protocol=HTTP}
 
 let script = """NEWGTS
 'testname'
@@ -114,6 +114,7 @@ describe "Warp10.Client" <| fun _ ->
                     Latitude=None
                     Longitude=None
                     ClassName="foo"
+                    Elevation=None
                     Labels=[("label0","val0");("label1","val1")]
                     Value=LONG 123
                 }
@@ -122,6 +123,7 @@ describe "Warp10.Client" <| fun _ ->
                     Latitude=None
                     Longitude=None
                     ClassName="foo"
+                    Elevation=None
                     Labels=[("label0","val0");("label1","val1")]
                     Value=LONG 124
                 }
@@ -130,6 +132,7 @@ describe "Warp10.Client" <| fun _ ->
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
                     ClassName="foo"
+                    Elevation=None
                     Labels=[("label0","val0");("label1","val1")]
                     Value=LONG 129
                 }
@@ -138,6 +141,7 @@ describe "Warp10.Client" <| fun _ ->
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
                     ClassName="foo"
+                    Elevation=None
                     Labels=[("label0","val0");("label1","val1")]
                     Value=LONG 129
                 }
@@ -146,6 +150,7 @@ describe "Warp10.Client" <| fun _ ->
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
                     ClassName="foo"
+                    Elevation=None
                     Labels=[("label0","val0");("label1","val1")]
                     Value=BOOL true
                 }
@@ -154,6 +159,7 @@ describe "Warp10.Client" <| fun _ ->
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
                     ClassName="foo"
+                    Elevation=None
                     Labels=[("label0","val0");("label1","val1")]
                     Value=STRING "toto"
                 }
@@ -161,8 +167,27 @@ describe "Warp10.Client" <| fun _ ->
                     TimeStamp=Some now
                     Latitude=Some (48,0)
                     Longitude=Some (-4,5)
+                    Elevation=None
                     ClassName="foo"
                     Labels=[("label0","val0");("label1","val1")]
+                    Value=DOUBLE 456.789
+                }
+                {
+                    TimeStamp=Some now
+                    Latitude=Some (48,0)
+                    Longitude=Some (-4,5)
+                    Elevation=Some 158
+                    ClassName="foo"
+                    Labels=[("label0","val0");("label1","val1")]
+                    Value=DOUBLE 456.789
+                }
+                {
+                    TimeStamp=Some now
+                    Latitude=Some (48,0)
+                    Longitude=Some (-4,5)
+                    Elevation=Some 158
+                    ClassName="foo{"
+                    Labels=[("label0}","val0,");("label1=","val1")]
                     Value=DOUBLE 456.789
                 }
             ]
@@ -186,6 +211,7 @@ describe "Warp10.Client" <| fun _ ->
                 "1443000000000000// titi{a=4,b=4} 4"
                 "1444000000000000// toto{a=42,b=42} 42"
                 "1444000000000000// titi{a=42,b=42} 42"
+                "1444000000000000//45.89 titi{a=42,b=42} 42"
             ]
             |> List.map UpdateRequest.fromString
             |> List.map insert
@@ -225,6 +251,16 @@ describe "Warp10.Client" <| fun _ ->
                 let request = Partial("~t.t.{b=4}", (Timestamp (1440000000000000.,1444000000000000. )))
                 checkDelete request
                 )
+
+        (* // on latest versions it does not seem to work anymore
+        it "should delete" <| fun _ ->
+
+            prepareData()
+            |> Promise.map( fun _ ->
+                let request = From("~t.t.{b=4}", DateTime(2015,9,2,12,0,0,0))
+                checkDelete request
+                )
+        *)
 
         it "should delete" <| fun _ ->
 
