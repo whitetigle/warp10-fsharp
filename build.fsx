@@ -25,7 +25,7 @@ System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 
 let srcFiles =
     !! "./src/Warp10/Warp10.fsproj"
-    ++ "./src/Warp10.Net/Warp10.Net.fsproj"
+//    ++ "./src/Warp10.Net/Warp10.Net.fsproj"
 
 let testsGlob = "tests/**/*.fsproj"
 
@@ -225,10 +225,10 @@ Target.create "Publish" (fun _ ->
     ==> "DotnetRestore"
     ==> "MochaTest"
 //    ==> "ExpectoTest"
-//    ==> "Publish"
+    ==> "Publish"
 
 "DotnetRestore"
     ==> "Watch"
 
 //Target.runOrDefault "ExpectoTest"
-Target.runOrDefault "MochaTest"
+Target.runOrDefault "Publish"

@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../src/Warp10/Warp10.fsproj" />
-    <ProjectReference Include="../src/Warp10.Net/Warp10.Net.fsproj" />
+<!-->    <ProjectReference Include="../src/Warp10.Net/Warp10.Net.fsproj" />-->
   </ItemGroup>
   <ItemGroup>
 <!--    <Compile Include="Util.fs" />-->
