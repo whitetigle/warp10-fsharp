@@ -33,7 +33,7 @@ module Client =
             ]
 
         promise {
-            let url =  prepareUrl endpoint Operation.Update
+            let url =  prepareUrl endpoint Endpoint.Update
             let! res = fetch url defaultProps
             let status =
                 match res.Status with
@@ -55,7 +55,7 @@ module Client =
             ]
 
         promise {
-            let url =  prepareUrl endpoint Operation.Delete
+            let url =  prepareUrl endpoint Endpoint.Delete
             let url = sprintf "%s?%s" url (DeleteRequest.toString value)
             let! res = fetch url defaultProps
             let status =
@@ -79,7 +79,7 @@ module Client =
             ]
 
         promise {
-            let url =  prepareUrl endpoint Operation.Exec
+            let url =  prepareUrl endpoint Endpoint.Exec
             let! res = fetch url defaultProps
             match res.Ok with
             | true ->
@@ -102,7 +102,7 @@ module Client =
             ]
 
         promise {
-            let url =  prepareUrl endpoint Operation.Fetch
+            let url =  prepareUrl endpoint Endpoint.Fetch
             let url = sprintf "%s?%s" url (FetchRequest.toString value)
             let! res = fetch url defaultProps
             let! text = res.text()

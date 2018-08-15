@@ -230,5 +230,4 @@ Target.create "Publish" (fun _ ->
 "DotnetRestore"
     ==> "Watch"
 
-//Target.runOrDefault "ExpectoTest"
-Target.runOrDefault "Publish"
+Target.runOrDefault "MochaTest"

@@ -4,6 +4,7 @@ open Fable.Core
 open Fable.Import
 open Fable.Core.Testing
 open Warp10.Shared.Types
+open Warp10.Shared.Script
 open System
 
 let inline equal (expected: 'T) (actual: 'T): unit =
@@ -255,4 +256,18 @@ describe "Warp10.Types" <| fun _ ->
                 }
             let expected = "1440000000000000/42.8:58.5/1589 toto{a=42,b=42} 25.898"
             let actual = wanted |> UpdateRequest.toString
+            equal expected actual
+
+    describe "FastReading -> Reading" <| fun _ ->
+        it "should convert a FastReading into a Reading" <| fun _ ->
+            let expected =
+                {
+                    TimeStamp=Now
+                    Latitude=Some (42,8)
+                    Longitude=Some (58,5)
+                    Elevation=Some 1589
+                    Value=DOUBLE 25.898
+                }
+            let wanted = Now, Some (42,8), Some (58,5), Some 1589,DOUBLE 25.898
+            let actual = wanted |> FastReading.toReading
             equal expected actual

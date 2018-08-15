@@ -41,7 +41,7 @@ module Types =
         else None
 
     [<StringEnum>]
-    type Operation =
+    type Endpoint =
         | [<CompiledName("fetch")>] Fetch
         | [<CompiledName("update")>] Update
         | [<CompiledName("exec")>] Exec
@@ -129,7 +129,7 @@ module Types =
 
     type UpdateRequest =
         {
-            TimeStamp:float option
+            TimeStamp:TimeStamp option
             Latitude: WGS84 option
             Longitude: WGS84 option
             Elevation: int option

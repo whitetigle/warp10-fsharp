@@ -21,13 +21,13 @@ JsInterop.importAll "isomorphic-fetch"
 
 // assume warp10 is working locally and tokens have been set
 // change this token to yours
-let readToken : Token = Read "4l_tJMgbsVp8Tydi5Msxb3GqEAudZTyDHXTCYZADwZ_RzPVhHB17aoHukmqHUYUdxFQoTZw5Y7POdldPrWpUXZsYNUU8Nt8l1Lky2KeubuY9Z3w5DCzST."
+let readToken : Token = Read "7GJWBE3sW4PKDrgmRH1NP8y02DhMyQZtnn1chiuJGIxqF0Hi9USmcujWm.qj_4eN3YFIyZ551ofyRFygmOYEkVaSf_hlc.4ScQ1aQhCvd6PrbuQ8Q7.MC."
 
 // change this token to yours
-let writeToken : Token = Write "UCuQmMpw7qZOsmzVX3jmboLOtcE20DFoCFR2ty88c9ulPtes3o4giPUsHZuLerFdHWsxOeRyHW6XhiEe1jUxzokuFg28fXyQzdLJzTAmAvc"
+let writeToken : Token = Write "GgBpQQSFcQ82WSOhaG7toJDAJ1EQhoVQz8O11LO_KVJRGjqPBc2r3r5WtwMne2gXj1Wj.vWkp3fUSx5GF6Piy4UDuPh5oxaV0V.LyX96Gog"
 
 // change this host and port to yours
-let endpoint = { Host="192.168.99.100"; Port=Some 8080; ApiVersion=V0; Protocol=HTTP}
+let server = { Host="192.168.99.100"; Port=Some 8080; ApiVersion=V0; Protocol=HTTP}
 
 let script = """NEWGTS
 'testname'
@@ -52,7 +52,7 @@ describe "Warp10.Client" <| fun _ ->
         it "should exec" <| fun _ ->
             let expected = """[[{"c":"testname","l":{"label0":"42","label1":"foo"},"a":{},"v":[[800,57],[449,34]]}]]"""
 
-            Warp10.Client.exec (endpoint, readToken, script )
+            Warp10.Client.exec (server, readToken, script )
             |> Promise.map ( fun res ->
                 let result =
                     match res with
@@ -69,7 +69,7 @@ describe "Warp10.Client" <| fun _ ->
             let expected = 200
 
             let testUpdate request =
-                Warp10.Client.update (endpoint, writeToken, request )
+                Warp10.Client.update (server, writeToken, request )
                 |> Promise.map ( fun res ->
                     let result =
                         match res with
@@ -98,7 +98,7 @@ describe "Warp10.Client" <| fun _ ->
             let expected = 200
 
             let testUpdate request =
-                Warp10.Client.update (endpoint, writeToken, request )
+                Warp10.Client.update (server, writeToken, request )
                 |> Promise.map ( fun res ->
                     let result =
                         match res with
@@ -198,7 +198,7 @@ describe "Warp10.Client" <| fun _ ->
 
         let prepareData() =
             let insert request =
-                Warp10.Client.update (endpoint, writeToken, request )
+                Warp10.Client.update (server, writeToken, request )
 
             [
                 "1440000000000000// toto{a=42,b=42} 42"
@@ -219,7 +219,7 @@ describe "Warp10.Client" <| fun _ ->
 
         let checkDelete request =
             let expected = 200
-            Warp10.Client.delete (endpoint, writeToken, request )
+            Warp10.Client.delete (server, writeToken, request )
             |> Promise.map ( fun res ->
                 let result =
                     match res with
@@ -301,7 +301,7 @@ describe "Warp10.Client" <| fun _ ->
 
         let prepareData() =
             let insert request =
-                Warp10.Client.update (endpoint, writeToken, request )
+                Warp10.Client.update (server, writeToken, request )
 
             [
                 "1440000000000000// toto{a=42,b=42} 42"
@@ -321,7 +321,7 @@ describe "Warp10.Client" <| fun _ ->
 
         let fetchData request =
             let expected = true
-            Warp10.Client.fetch (endpoint, readToken, request )
+            Warp10.Client.fetch (server, readToken, request )
             |> Promise.map ( fun res ->
                 let result =
                     match res with

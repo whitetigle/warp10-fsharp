@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <Description>Warp10 client library for F#</Description>
+        <Description>Warp10 client library for Fable/F#</Description>
         <PackageProjectUrl>https://github.com/whitetigle/warp10-fsharp</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/whitetigle/warp10-fsharp/blob/master/LICENSE.md</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/whitetigle/warp10-fsharp</RepositoryUrl>
-        <PackageTags>fsharp</PackageTags>
+        <PackageTags>fsharp,fable,warp10,iot,timeseries</PackageTags>
         <Authors>François Nicaise</Authors>
         <Version>1.0.0</Version>
     </PropertyGroup>

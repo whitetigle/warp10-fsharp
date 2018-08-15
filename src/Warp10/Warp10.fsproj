@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <Description>Warp10 client library for F#</Description>
+        <Description>Warp10 client library for Fable/F#</Description>
         <PackageProjectUrl>https://github.com/whitetigle/warp10-fsharp</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/whitetigle/warp10-fsharp/blob/master/LICENSE.md</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/whitetigle/warp10-fsharp</RepositoryUrl>
@@ -16,6 +16,7 @@
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="../Shared/Types.fs" />
+        <Compile Include="../Shared/Script.fs" />
         <Compile Include="Client.fs" />
     </ItemGroup>
     <ItemGroup>
