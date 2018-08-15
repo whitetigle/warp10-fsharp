@@ -1,5 +1,5 @@
 # Disclaimer
-:danger: This is a highly experimental project. While many things work, it should be noted that the Api may change. So use at your own risks :danger:
+:warning: This is a highly experimental project. While many things work, it should be noted that the Api may change. So for now use at your own risks :warning:
 
 # warp10-fsharp
 Fable/F# Client for [Warp10 Geo Time series](http://www.warp10.io)
