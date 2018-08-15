@@ -9,9 +9,12 @@
   </ItemGroup>
   <ItemGroup>
 <!--    <Compile Include="Util.fs" />-->
+    <Compile Include="Util.fs" />
+    <Compile Include="Tests.Warp10.Samples.fs" />
     <Compile Include="Tests.Warp10.Types.fs" />
     <Compile Include="Tests.Warp10.Client.fs" />
     <Compile Include="Tests.Warp10.Script.fs" />
+    <Compile Include="Tests.Warp10.PrepareData.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

@@ -42,6 +42,36 @@ module Client =
             return status
         }
 
+    let batchUpdate (endpoint:EndPoint, token:Token, value:UpdateRequest list) =
+        let token =
+            match token with
+            | Write tok -> tok
+            | Read _ -> failwith "you need a Write token"
+
+        let query =
+            value
+                |> Seq.map UpdateRequest.toString
+                |> String.concat "\n"
+
+        printfn "%s" query
+
+        let defaultProps =
+            [
+                RequestProperties.Method HttpMethod.POST
+                prepareHeaders token
+                RequestProperties.Body <| unbox query
+            ]
+
+        promise {
+            let url =  prepareUrl endpoint Endpoint.Update
+            let! res = fetch url defaultProps
+            let status =
+                match res.Status with
+                | x when x = 200 -> Ok 200
+                | x -> Error x
+            return status
+        }
+
     let delete (endpoint:EndPoint, token:Token, value:DeleteRequest) =
         let token =
             match token with

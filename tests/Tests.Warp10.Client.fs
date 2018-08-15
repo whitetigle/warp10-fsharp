@@ -1,48 +1,10 @@
 module Tests.Warp10.Client
 
-open Fable.Core
-open Fable.Import
 open Fable.PowerPack
-open Fable.Core.Testing
 open Warp10.Shared.Types
 open System
-
-let inline equal (expected: 'T) (actual: 'T): unit =
-  Testing.Assert.AreEqual(expected, actual)
-
-[<Global>]
-let describe (msg: string) (f: unit->unit): unit = jsNative
-
-[<Global>]
-let it (msg: string) (f: unit->JS.Promise<'T>): unit = jsNative
-
-// exec polyfill for node
-JsInterop.importAll "isomorphic-fetch"
-
-// assume warp10 is working locally and tokens have been set
-// change this token to yours
-let readToken : Token = Read "7GJWBE3sW4PKDrgmRH1NP8y02DhMyQZtnn1chiuJGIxqF0Hi9USmcujWm.qj_4eN3YFIyZ551ofyRFygmOYEkVaSf_hlc.4ScQ1aQhCvd6PrbuQ8Q7.MC."
-
-// change this token to yours
-let writeToken : Token = Write "GgBpQQSFcQ82WSOhaG7toJDAJ1EQhoVQz8O11LO_KVJRGjqPBc2r3r5WtwMne2gXj1Wj.vWkp3fUSx5GF6Piy4UDuPh5oxaV0V.LyX96Gog"
-
-// change this host and port to yours
-let server = { Host="192.168.99.100"; Port=Some 8080; ApiVersion=V0; Protocol=HTTP}
-
-let script = """NEWGTS
-'testname'
-RENAME
-{ 'label0' '42' 'label1' 'foo' }
-RELABEL
-100  NaN NaN NaN 10 ADDVALUE
-200  NaN NaN NaN  9 ADDVALUE
-300  NaN NaN NaN  8 ADDVALUE
-400  NaN NaN NaN  7 ADDVALUE
-500  NaN NaN NaN  6 ADDVALUE
-600  NaN NaN NaN  5 ADDVALUE
-700  NaN NaN NaN  4 ADDVALUE
-800  NaN NaN NaN 42 ADDVALUE
-[ SWAP bucketizer.sum 0 0 2 ] BUCKETIZE"""
+open Util
+open Util.TestsWithPromises
 
 
 describe "Warp10.Client" <| fun _ ->
@@ -51,6 +13,21 @@ describe "Warp10.Client" <| fun _ ->
 
         it "should exec" <| fun _ ->
             let expected = """[[{"c":"testname","l":{"label0":"42","label1":"foo"},"a":{},"v":[[800,57],[449,34]]}]]"""
+
+            let script = """NEWGTS
+            'testname'
+            RENAME
+            { 'label0' '42' 'label1' 'foo' }
+            RELABEL
+            100  NaN NaN NaN 10 ADDVALUE
+            200  NaN NaN NaN  9 ADDVALUE
+            300  NaN NaN NaN  8 ADDVALUE
+            400  NaN NaN NaN  7 ADDVALUE
+            500  NaN NaN NaN  6 ADDVALUE
+            600  NaN NaN NaN  5 ADDVALUE
+            700  NaN NaN NaN  4 ADDVALUE
+            800  NaN NaN NaN 42 ADDVALUE
+            [ SWAP bucketizer.sum 0 0 2 ] BUCKETIZE"""
 
             Warp10.Client.exec (server, readToken, script )
             |> Promise.map ( fun res ->

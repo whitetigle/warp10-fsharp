@@ -1,21 +1,12 @@
 module Tests.Warp10.Types
 
 open Fable.Core
-open Fable.Import
-open Fable.Core.Testing
 open Warp10.Shared.Types
 open Warp10.Shared.Script
-open System
-
-let inline equal (expected: 'T) (actual: 'T): unit =
-  Testing.Assert.AreEqual(expected, actual)
-
-[<Global>]
-let describe (msg: string) (f: unit->unit): unit = jsNative
+open Util
 
 [<Global>]
 let it (msg: string) (f: unit->unit): unit = jsNative
-
 
 describe "Warp10.Types" <| fun _ ->
 

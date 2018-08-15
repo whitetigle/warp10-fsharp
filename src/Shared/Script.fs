@@ -15,25 +15,43 @@ module Script =
         | BOOL v -> sprintf "%b" v
         | STRING v -> sprintf "'%s'" v
 
-    type TimeStamp =
+    type ReadingTimeStamp =
         | Now
         | UserDefined of int
 
     type Reading =
         {
-            TimeStamp:TimeStamp
+            TimeStamp:ReadingTimeStamp
             Latitude: WGS84 option
             Longitude: WGS84 option
             Elevation: int option
             Value:ValueType
         }
 
-    type FastReading = TimeStamp * WGS84 option * WGS84 option * int option * ValueType
+    type FastReading = ReadingTimeStamp * WGS84 option * WGS84 option * int option * ValueType
 
+    [<RequireQualifiedAccess>]
     module FastReading =
+
         let toReading fastreading =
             let ts, lat, long, elev, value = fastreading
             { TimeStamp = ts;Latitude = lat;Longitude = long;Elevation=elev;Value=value}
+
+        let toUpdateRequest classname labels (fastreading:FastReading) =
+            let ts, lat, long, elev, value = fastreading
+            let ts =
+                match ts with
+                | Now -> None
+                | UserDefined value -> (float value) * 1000000. |> Some
+            {
+                TimeStamp=ts
+                Latitude= lat
+                Longitude= long
+                Elevation= elev
+                ClassName=classname
+                Labels=labels
+                Value=value
+            }
 
 
     type ReadingValue = float list
@@ -95,6 +113,11 @@ module Script =
             | LastLe of ValueType
 
     [<RequireQualifiedAccess>]
+    module Mapper =
+        type CommandName =
+            | Abs
+
+    [<RequireQualifiedAccess>]
     module Stack =
         [<StringEnum>]
         type CommandName =
@@ -118,6 +141,7 @@ module Script =
             | Relabel
             | AddValue
             | Get
+            | Fetch
 
         [<RequireQualifiedAccess>]
         type Command =
@@ -148,8 +172,8 @@ module Script =
                     | Command.AddValue reading ->
                         let timestamp =
                             match reading.TimeStamp with
-                            | TimeStamp.Now -> (string Date.Now)
-                            | TimeStamp.UserDefined ts -> sprintf "%i" ts
+                            | ReadingTimeStamp.Now -> (string Date.Now)
+                            | ReadingTimeStamp.UserDefined ts -> sprintf "%i" ts
 
                         let lat =
                             match reading.Latitude with
@@ -220,6 +244,65 @@ module Script =
                     sprintf "[ SWAP bucketizer.%s %i %i %i ] %s" operation lastbucket bucketspan bucketcount command
 
             sprintf "%s %s" previousScript script, gts
+
+        let map mapper preWindow postWindow occurences (previousScript,gts) =
+            let command = (string Frameworks.Map).ToUpper()
+            let script =
+                match mapper with
+                | _ ->
+                    let operation = (string mapper).ToLower()
+                    sprintf "[ SWAP mapper.%s %i %i %i ] %s" operation preWindow postWindow occurences command
+
+            sprintf "%s %s" previousScript script, gts
+
+        let fetch token classQuery labelsQuery (stop:double) (elapsedTime:double) (previousScript,gts) =
+            let token =
+                match token with
+                | Write tok -> failwith "you need a Read token"
+                | Read tok -> tok
+
+            let command = (string Fetch).ToUpper()
+            let args =
+                labelsQuery |> List.map( fun (k,v) -> sprintf "'%s' '%s'" k v ) |> String.concat " "
+
+            let stop = stop.ToString().Split('.').[0]
+            let elapsedTime = elapsedTime.ToString().Split('.').[0]
+
+            let script =
+                sprintf "[ '%s' '%s' { %s } %s %s ] %s" token classQuery args stop elapsedTime command
+
+            sprintf "%s %s" previousScript script, gts
+
+        let reduce labels reducer (previousScript,gts) =
+            let command = (string Frameworks.Reduce).ToUpper()
+            let labels =
+                match labels with
+                | Some labels -> failwith "labels are not yet handled" // labels |> toScript
+                | None -> "[]"
+
+            let script =
+                match reducer with
+                | _ ->
+                    let operation = (string reducer).ToLower()
+                    sprintf "[ SWAP %s reducer.%s  ] %s" labels operation command
+
+            sprintf "%s %s" previousScript script, gts
+
+        let apply labels op (previousScript,gts) =
+            let command = (string Frameworks.Apply).ToUpper()
+            let labels =
+                match labels with
+                | Some labels -> failwith "labels are not yet handled" // labels |> toScript
+                | None -> "[]"
+
+            let script =
+                match op with
+                | _ ->
+                    let operation = (string op).ToLower()
+                    sprintf "[ SWAP %s %s ] %s" labels operation command
+
+            sprintf "%s %s" previousScript script, gts
+
 
         let filter labels filter (previousScript,gts) =
             let operation = (string filter).ToLower()
