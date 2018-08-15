@@ -8,6 +8,13 @@ open Thoth.Json
 
 module Script =
 
+    let parseValueType v =
+        match v with
+        | LONG v -> sprintf "%i" v
+        | DOUBLE v -> double(v).ToString() // remove trailing zeros
+        | BOOL v -> sprintf "%b" v
+        | STRING v -> sprintf "'%s'" v
+
     type TimeStamp =
         | Now
         | UserDefined of int
@@ -55,61 +62,62 @@ module Script =
     [<RequireQualifiedAccess>]
     module Date =
         [<StringEnum>]
-        type CommandNames =
+        type CommandName =
             | [<CompiledName("NOW")>] Now
 
     [<RequireQualifiedAccess>]
     module Bucketizer =
-        [<StringEnum>]
-        type CommandNames =
-            | [<CompiledName("bucketizer.sum")>] Sum
-            | [<CompiledName("bucketizer.max")>] Max
-            | [<CompiledName("bucketizer.min")>] Min
-            | [<CompiledName("bucketizer.mean")>] Mean
-            | [<CompiledName("bucketizer.first")>] First
-            | [<CompiledName("bucketizer.last")>] Last
-            | [<CompiledName("bucketizer.median")>] Median
-            | [<CompiledName("bucketizer.count")>] Count
-            | [<CompiledName("bucketizer.and")>] And
-            | [<CompiledName("bucketizer.or")>] Or
-
-        type WithParams =
+        type CommandName =
+            | Sum
+            | Max
+            | Min
+            | Mean
+            | First
+            | Last
+            | Median
+            | Count
+            | And
+            | Or
             | MeanCircular of float
             | MeanCircularNoNull of float
             | Join of string
 
+    [<RequireQualifiedAccess>]
+    module Filter =
+        type CommandName =
+            | ByClass of string
+            | ByLabels of (string * string) list
+            | LastEq of ValueType
+            | LastNe of ValueType
+            | LastGt of ValueType
+            | LastGe of ValueType
+            | LastLt of ValueType
+            | LastLe of ValueType
 
     [<RequireQualifiedAccess>]
     module Stack =
         [<StringEnum>]
-        type CommandNames =
+        type CommandName =
             | [<CompiledName("SWAP")>] Swap
 
     [<RequireQualifiedAccess>]
     module Frameworks =
-        [<StringEnum>]
-        type CommandNames =
-            | [<CompiledName("BUCKETIZE")>] Bucketize
-            | [<CompiledName("MAP")>] Map
-            | [<CompiledName("FILTER")>] Filter
-            | [<CompiledName("REDUCE")>] Reduce
-            | [<CompiledName("APPLY")>] Apply
-
-        [<RequireQualifiedAccess>]
-        type Command =
-            | Bucketize of Bucketizer.CommandNames * int * int * int
+        type CommandName =
+            | Bucketize
+            | Map
+            | Filter
+            | Reduce
+            | Apply
 
     [<RequireQualifiedAccess>]
     module GTS =
 
-        [<StringEnum>]
-        type CommandNames =
-            | [<CompiledName("NEWGTS")>] New
-            | [<CompiledName("RENAME")>] Rename
-            | [<CompiledName("RELABEL")>] Relabel
-            | [<CompiledName("ADDVALUE")>] AddValue
-            | [<CompiledName("GET")>] Get
-            | [<CompiledName("0 GET")>] Extract
+        type CommandName =
+            | NewGTS
+            | Rename
+            | Relabel
+            | AddValue
+            | Get
 
         [<RequireQualifiedAccess>]
         type Command =
@@ -117,17 +125,16 @@ module Script =
             | Rename of string
             | Relabel of (string * string) list
             | AddValue of Reading
-            | Framework of Frameworks.Command
 
         let toScript (commands:Command list) =
             commands
                 |> List.map( fun cmd ->
                     match cmd with
                     | Command.New ->
-                        (string CommandNames.New)
+                        (string CommandName.NewGTS).ToUpper()
 
                     | Command.Rename name ->
-                        sprintf "'%s' %s" name (string CommandNames.Rename)
+                        sprintf "'%s' %s" name ((string CommandName.Rename).ToUpper())
 
                     | Command.Relabel list ->
                         let labels =
@@ -136,7 +143,7 @@ module Script =
                                     sprintf "'%s' '%s'" k v
                                 )
                                 |> String.concat " "
-                        sprintf "{ %s } %s" labels (string CommandNames.Relabel)
+                        sprintf "{ %s } %s" labels ((string CommandName.Relabel).ToUpper())
 
                     | Command.AddValue reading ->
                         let timestamp =
@@ -163,14 +170,9 @@ module Script =
                             | Some elev ->  sprintf "%i" elev
                             | None -> (string Nan)
 
-                        let value =
-                            match reading.Value with
-                            | LONG v -> sprintf "%i" v
-                            | DOUBLE v -> double(v).ToString() // remove trailing zeros
-                            | BOOL v -> sprintf "%b" v
-                            | STRING v -> sprintf "'%s'" v
+                        let value = parseValueType reading.Value
 
-                        sprintf "%s %s %s %s %s %s" timestamp lat long elev value (string CommandNames.AddValue)
+                        sprintf "%s %s %s %s %s %s" timestamp lat long elev value ((string CommandName.AddValue).ToUpper())
                 )
                 |> String.concat " "
 
@@ -192,25 +194,70 @@ module Script =
         let toList script =
             sprintf "[ %s ]" script
 
-        let bucketize bucketizer lastbucket bucketspan bucketcount gts =
-            let currentGTS = gts |> toScript |> toList
-            sprintf "[ %s %s %i %i %i ] %s" currentGTS (string bucketizer) lastbucket bucketspan bucketcount (string Frameworks.Bucketize)
+        let join (currentScript,(gts:Command list)) =
+            let hasGTS = not gts.IsEmpty // if we get results from a FETCH, then it means we do not have any newly created GTS to manage
+            if hasGTS then
+                let output = sprintf "[ %s ] %s" (gts |> toScript) currentScript
+                printfn "%s" output
+                output
+            else
+                let output = sprintf "%s" currentScript
+                printfn "%s" output
+                output
 
-        let bucketizeWithParams bucketizer lastbucket bucketspan bucketcount gts =
-            let currentGTS = gts |> toScript |> toList
-            match bucketizer with
-            | Bucketizer.Join param ->
-                sprintf "[ %s ' %s ' bucketizer.join %i %i %i ] %s" currentGTS param lastbucket bucketspan bucketcount (string Frameworks.Bucketize)
-            | Bucketizer.MeanCircular param ->
-                sprintf "[ %s %s bucketizer.mean.circular %i %i %i ] %s" currentGTS (double(param).ToString()) lastbucket bucketspan bucketcount (string Frameworks.Bucketize)
-            | Bucketizer.MeanCircularNoNull param ->
-                sprintf "[ %s %s bucketizer.mean.circular.exclude-nulls %i %i %i ] %s" currentGTS (double(param).ToString()) lastbucket bucketspan bucketcount (string Frameworks.Bucketize)
-            | _ ->
-                failwith (sprintf "this operation does not allow parameters: %s" (string bucketizer))
+        let bucketize bucketizer lastbucket bucketspan bucketcount (previousScript,gts) =
+            let command = (string Frameworks.Bucketize).ToUpper()
+            let script =
+                match bucketizer with
+                | Bucketizer.Join param ->
+                    sprintf "[ SWAP ' %s ' bucketizer.join %i %i %i ] %s" param lastbucket bucketspan bucketcount command
+                | Bucketizer.MeanCircular param ->
+                    sprintf "[ SWAP %s bucketizer.mean.circular %i %i %i ] %s" (double(param).ToString()) lastbucket bucketspan bucketcount command
+                | Bucketizer.MeanCircularNoNull param ->
+                    sprintf "[ SWAP %s bucketizer.mean.circular.exclude-nulls %i %i %i ] %s" (double(param).ToString()) lastbucket bucketspan bucketcount command
+                | _ ->
+                    let operation = (string bucketizer).ToLower()
+                    sprintf "[ SWAP bucketizer.%s %i %i %i ] %s" operation lastbucket bucketspan bucketcount command
 
-        (*
-        NEWGTS "GTS1" RENAME
-{ 'label0' '42' } RELABEL
-10 NaN NaN NaN  42  ADDVALUE
-20 NaN NaN NaN 123  ADDVALUE
-*)
+            sprintf "%s %s" previousScript script, gts
+
+        let filter labels filter (previousScript,gts) =
+            let operation = (string filter).ToLower()
+            let command = (string Frameworks.Filter).ToUpper()
+            let labels =
+                match labels with
+                | Some labels -> failwith "labels are not yet handled" // labels |> toScript
+                | None -> "[]"
+
+            let query =
+                match filter with
+                | Filter.ByClass param ->
+                    sprintf "[ SWAP %s '%s' filter.byclass ] %s" labels param command
+
+                | Filter.ByLabels list ->
+                    let args =
+                        list |> List.map( fun (k,v) -> sprintf "'%s' '%s'" k v ) |> String.concat " "
+
+                    sprintf "[ SWAP %s { %s } filter.bylabels ] %s" labels args command
+
+                | _ ->
+                    let operation,param =
+                        match filter with
+                        | Filter.LastEq param ->
+                            "filter.last.eq", parseValueType param
+                        | Filter.LastNe param ->
+                            "filter.last.ne", parseValueType param
+                        | Filter.LastGe param ->
+                            "filter.last.ge", parseValueType param
+                        | Filter.LastGt param ->
+                            "filter.last.gt", parseValueType param
+                        | Filter.LastLt param ->
+                            "filter.last.lt", parseValueType param
+                        | Filter.LastLe param ->
+                            "filter.last.le", parseValueType param
+                        | _ ->  failwith (sprintf "unhandled command %A" filter)
+
+                    sprintf "[ SWAP %s %s %s ] %s" labels param operation command
+
+            sprintf "%s %s" previousScript query, gts
+
