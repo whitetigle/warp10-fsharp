@@ -1,0 +1,20 @@
+// @endpoint https://warp10.gra1.metrics.ovh.net/api/v0/exec
+
+[
+    'sMewcQeIFrr2v2JTCHCGTqMRDr2Ubb7lxlUFZ6Ft6isAJQxZIQUwA0I038J7X9uBy6b6akOlRQYeW1N_35cMusYJMB7NuKP79sz.kK5PwxBkQDtHBT4Ls6oODTe19DerIH047n7weB_rDxGcdHIv3L.Tg8GJLMcC'
+    'speed'
+    {
+    }
+    NOW -1000000000000
+]
+FETCH
+[ SWAP bucketizer.sum 0 300000000 0 ] BUCKETIZE
+<%
+  DROP DUP TICKS <% DROP 'UTC' ISO8601 %> LMAP SWAP VALUES 2 ->LIST ZIP
+%> LMAP
+
+FETCH
+[ SWAP bucketizer.sum 0 300000000 0 ] BUCKETIZE
+<%
+  DROP DUP TICKS 1 ->LIST ZIP
+%> LMAP

@@ -7,7 +7,7 @@
         <RepositoryUrl>https://github.com/whitetigle/warp10-fsharp</RepositoryUrl>
         <PackageTags>fsharp</PackageTags>
         <Authors>François Nicaise</Authors>
-        <Version>0.0.9</Version>
+        <Version>1.0.0-beta-001</Version>
         <PackageId>Warp10.Client</PackageId>
     </PropertyGroup>
     <PropertyGroup>
